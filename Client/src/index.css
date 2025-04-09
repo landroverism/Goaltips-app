@@ -1,0 +1,116 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 210 33% 9%;
+    --foreground: 0 0% 100%;
+
+    --card: 210 29% 13%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 210 29% 13%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 122 39% 49%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 25% 16%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 210 20% 18%;
+    --muted-foreground: 215 16.3% 70%;
+
+    --accent: 120 61% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 210 25% 20%;
+    --input: 210 25% 20%;
+    --ring: 122 39% 49%;
+
+    --radius: 0.5rem;
+  }
+
+  .light {
+    --background: 0 0% 98%;
+    --foreground: 210 33% 9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 210 33% 9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 210 33% 9%;
+
+    --primary: 122 39% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 15% 90%;
+    --secondary-foreground: 210 33% 9%;
+
+    --muted: 210 15% 92%;
+    --muted-foreground: 215 16.3% 40%;
+
+    --accent: 120 61% 45%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 210 15% 86%;
+    --input: 210 15% 86%;
+    --ring: 122 39% 40%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Roboto', sans-serif;
+  }
+}
+
+.match-card {
+  transition: transform 0.2s ease-in-out;
+}
+
+.match-card:hover {
+  transform: translateY(-4px);
+}
+
+.prediction-pill {
+  transition: all 0.3s ease;
+}
+
+.prediction-pill:hover {
+  filter: brightness(110%);
+}
+
+.loading-skeleton {
+  @apply animate-pulse bg-muted rounded;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--primary));
+}
