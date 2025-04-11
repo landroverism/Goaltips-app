@@ -4,6 +4,7 @@ const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const pool = require('./db');
 const { authenticateToken, isAdmin } = require('./auth');
+const sportmonksAPI = require('./sportmonksAPI');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -93,16 +94,10 @@ app.get('/predictions', async (req, res) => {
     }
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-});
-const sportmonksApi = require('./sportmonksApi');
-
 // Get live matches
 app.get('/api/live-matches', authenticateToken, async (req, res) => {
     try {
-        const matches = await sportmonksApi.getLiveMatches();
+        const matches = await sportmonksAPI.getLiveMatches();
         res.json(matches);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -112,7 +107,7 @@ app.get('/api/live-matches', authenticateToken, async (req, res) => {
 // Get all livescores
 app.get('/api/livescores', authenticateToken, async (req, res) => {
     try {
-        const livescores = await sportmonksApi.getAllLivescores();
+        const livescores = await sportmonksAPI.getAllLivescores();
         res.json(livescores);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -122,7 +117,7 @@ app.get('/api/livescores', authenticateToken, async (req, res) => {
 // Get fixtures by date
 app.get('/api/fixtures/:date', authenticateToken, async (req, res) => {
     try {
-        const fixtures = await sportmonksApi.getFixturesByDate(req.params.date);
+        const fixtures = await sportmonksAPI.getFixturesByDate(req.params.date);
         res.json(fixtures);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -132,7 +127,7 @@ app.get('/api/fixtures/:date', authenticateToken, async (req, res) => {
 // Get leagues
 app.get('/api/leagues', authenticateToken, async (req, res) => {
     try {
-        const leagues = await sportmonksApi.getLeagues();
+        const leagues = await sportmonksAPI.getLeagues();
         res.json(leagues);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -142,7 +137,7 @@ app.get('/api/leagues', authenticateToken, async (req, res) => {
 // Get predictions for a fixture
 app.get('/api/predictions/:fixtureId', authenticateToken, async (req, res) => {
     try {
-        const predictions = await sportmonksApi.getPredictions(req.params.fixtureId);
+        const predictions = await sportmonksAPI.getPredictions(req.params.fixtureId);
         res.json(predictions);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -152,14 +147,12 @@ app.get('/api/predictions/:fixtureId', authenticateToken, async (req, res) => {
 // Get standings for a season
 app.get('/api/standings/:seasonId', authenticateToken, async (req, res) => {
     try {
-        const standings = await sportmonksApi.getStandings(req.params.seasonId);
+        const standings = await sportmonksAPI.getStandings(req.params.seasonId);
         res.json(standings);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
-
-
 
 // User signup
 app.post('/signup', async (req, res) => {
@@ -179,7 +172,7 @@ app.post('/signup', async (req, res) => {
         
         // Generate token
         const token = jwt.sign(
-            { id: newUser.rows[0].id, username: newUser.rows[0].username, role: newUser.rows[0].role },
+            { id: newUser.rows[0].id, username: newUser.rows[0].username, email: newUser.rows[0].email, role: newUser.rows[0].role },
             process.env.JWT_SECRET,
             { expiresIn: '1h' }
         );
@@ -208,4 +201,9 @@ app.post('/reset-password', async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
+});
+
+// Start server
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });

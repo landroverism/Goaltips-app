@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Check } from 'lucide-react';
@@ -11,6 +10,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { leagues } from '@/lib/utils';
+import { toast } from 'sonner';
+import { ImageWithFallback } from '@/components/ui/image-with-fallback';
+import { leagueLogos } from '@/lib/league-logos';
 
 interface LeagueFilterProps {
   selectedLeagues: string[];
@@ -19,19 +21,27 @@ interface LeagueFilterProps {
 
 const LeagueFilter: React.FC<LeagueFilterProps> = ({ selectedLeagues, onLeagueChange }) => {
   const handleLeagueToggle = (leagueId: string) => {
+    const league = leagues.find(l => l.id === leagueId);
+    if (!league) return;
+
     if (selectedLeagues.includes(leagueId)) {
       onLeagueChange(selectedLeagues.filter(id => id !== leagueId));
+      toast.success(`Removed ${league.name} from selection`);
     } else {
       onLeagueChange([...selectedLeagues, leagueId]);
+      toast.success(`Added ${league.name} to selection`);
     }
   };
 
   const handleSelectAll = () => {
-    onLeagueChange(leagues.map(league => league.id));
+    const allLeagueIds = leagues.map(league => league.id);
+    onLeagueChange(allLeagueIds);
+    toast.success(`Selected all ${leagues.length} leagues`);
   };
 
   const handleClearAll = () => {
     onLeagueChange([]);
+    toast.success('Cleared all league selections');
   };
 
   const selectedCount = selectedLeagues.length;
@@ -67,19 +77,28 @@ const LeagueFilter: React.FC<LeagueFilterProps> = ({ selectedLeagues, onLeagueCh
         
         {/* Display leagues grouped by country */}
         {Object.entries(leaguesByCountry).map(([country, countryLeagues]) => (
-          <React.Fragment key={country}>
+          <>
             <div className="px-2 py-1 text-xs font-semibold text-muted-foreground">{country}</div>
             {countryLeagues.map((league) => (
               <DropdownMenuCheckboxItem
                 key={league.id}
                 checked={selectedLeagues.includes(league.id)}
                 onCheckedChange={() => handleLeagueToggle(league.id)}
+                className="flex items-center gap-2"
               >
-                {league.name}
+                <div className="relative w-6 h-6 rounded-full">
+                  <ImageWithFallback
+                    src={leagueLogos[league.id as keyof typeof leagueLogos].src}
+                    fallbackSrc={leagueLogos[league.id as keyof typeof leagueLogos].fallback}
+                    alt={leagueLogos[league.id as keyof typeof leagueLogos].alt}
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                </div>
+                <span className="flex-1 truncate">{league.name}</span>
               </DropdownMenuCheckboxItem>
             ))}
             <DropdownMenuSeparator />
-          </React.Fragment>
+          </>
         ))}
       </DropdownMenuContent>
     </DropdownMenu>

@@ -18,7 +18,7 @@ api.interceptors.request.use((config) => {
 
 // Football data endpoints
 export const fetchLiveMatches = () => api.get('/api/live-matches');
-export const fetchLivescores = () => api.get('api/livescores');
+export const fetchLivescores = () => api.get('/api/livescores');
 export const fetchFixturesByDate = (date) => api.get(`/api/fixtures/${date}`);
 export const fetchLeagues = () => api.get('/api/leagues');
 export const fetchPredictions = (fixtureId) => api.get(`/api/predictions/${fixtureId}`);
