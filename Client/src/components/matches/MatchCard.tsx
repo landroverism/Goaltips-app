@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Match } from '../../types';
@@ -8,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import PredictionOptions from './PredictionOptions';
 import { useAuth } from '../../context/AuthContext';
+import { Clock, Stadium, Whistle, TrendingUp, AlertCircle } from 'lucide-react';
 
 interface MatchCardProps {
   match: Match;
@@ -81,10 +81,17 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
         
         {/* Match Actions */}
         <div className="border-t border-border p-3 flex justify-between items-center">
-          <div className="text-sm text-muted-foreground">
-            <span className="font-medium">1:</span> {match.odds.homeWin.toFixed(2)} |{" "}
-            <span className="font-medium">X:</span> {match.odds.draw.toFixed(2)} |{" "}
-            <span className="font-medium">2:</span> {match.odds.awayWin.toFixed(2)}
+          <div className="text-sm text-muted-foreground flex items-center">
+            <TrendingUp className="h-3 w-3 mr-1" />
+            {match.odds ? (
+              <>
+                <span className="font-medium">1:</span> {match.odds.homeWin?.toFixed(2) || 'N/A'} |{" "}
+                <span className="font-medium">X:</span> {match.odds.draw?.toFixed(2) || 'N/A'} |{" "}
+                <span className="font-medium">2:</span> {match.odds.awayWin?.toFixed(2) || 'N/A'}
+              </>
+            ) : (
+              <span>Odds not available</span>
+            )}
           </div>
           
           <div className="flex space-x-2">
@@ -92,6 +99,7 @@ const MatchCard: React.FC<MatchCardProps> = ({ match }) => {
               variant="ghost"
               size="sm"
               asChild
+              className="flex items-center gap-1"
             >
               <Link to={`/matches/${match.id}`}>Details</Link>
             </Button>

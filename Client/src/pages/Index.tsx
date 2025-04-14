@@ -3,20 +3,46 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { mockMatches, getMoreMatches } from '../data/mockData';
 import MatchCard from '../components/matches/MatchCard';
 import { Match } from '../types';
 import { Calendar, TrendingUp, Search, Clock } from 'lucide-react';
+import { fetchLiveMatches, fetchFixturesByDate, withLoading } from '../services/api';
+import { format } from 'date-fns';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Index: React.FC = () => {
-  const [matches, setMatches] = useState<Match[]>(mockMatches);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
   
   useEffect(() => {
-    // Simulate loading more matches
-    const additionalMatches = getMoreMatches(6);
-    setMatches([...mockMatches, ...additionalMatches]);
+    // Load real match data from API
+    const loadMatches = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Fetch both live and upcoming matches
+        const [liveMatches, upcomingMatches] = await Promise.all([
+          withLoading(() => fetchLiveMatches()),
+          withLoading(() => fetchFixturesByDate(format(new Date(), 'yyyy-MM-dd')))
+        ]);
+        
+        // Combine all matches
+        const allMatches = [
+          ...(liveMatches.data || []),
+          ...(upcomingMatches.data || [])
+        ];
+        
+        setMatches(allMatches);
+      } catch (error) {
+        console.error('Error loading matches:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadMatches();
   }, []);
 
   // Filter live matches
@@ -32,6 +58,31 @@ const Index: React.FC = () => {
     e.preventDefault();
     navigate(`/search?q=${searchQuery}`);
   };
+
+  // Loading skeleton for match cards
+  const MatchCardSkeleton = () => (
+    <div className="bg-card border border-border rounded-lg p-4 space-y-4">
+      <div className="flex justify-between items-center">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-5 w-16" />
+      </div>
+      <div className="flex justify-between items-center py-4">
+        <div className="flex items-center space-x-2">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <Skeleton className="h-5 w-28" />
+        </div>
+        <Skeleton className="h-8 w-8" />
+        <div className="flex items-center space-x-2">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-10 w-10 rounded-full" />
+        </div>
+      </div>
+      <div className="flex justify-between">
+        <Skeleton className="h-5 w-20" />
+        <Skeleton className="h-5 w-24" />
+      </div>
+    </div>
+  );
 
   return (
     <div>
@@ -102,7 +153,11 @@ const Index: React.FC = () => {
             </Button>
           </div>
           
-          {liveMatches.length > 0 ? (
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map(i => <MatchCardSkeleton key={i} />)}
+            </div>
+          ) : liveMatches.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {liveMatches.map(match => (
                 <MatchCard key={match.id} match={match} />
@@ -130,11 +185,17 @@ const Index: React.FC = () => {
             </Button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {upcomingMatches.map(match => (
-              <MatchCard key={match.id} match={match} />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map(i => <MatchCardSkeleton key={i} />)}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {upcomingMatches.map(match => (
+                <MatchCard key={match.id} match={match} />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
