@@ -40,12 +40,13 @@ app.get('/matches', async (req, res) => {
 
 // User login (generates JWT token)
 app.post('/login', async (req, res) => {
-    const { email, password} = req.body;
+    const { email, password } = req.body;
 
     try {
         const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (user.rows.length === 0) return res.status(400).json({ message: 'User not found' });
 
+        // Simple plain text password comparison
         if (user.rows[0].password !== password) {
             return res.status(400).json({ message: 'Invalid password' });
         }
@@ -58,9 +59,9 @@ app.post('/login', async (req, res) => {
 
         res.json({ token });
     } 
-    
     catch (error) {
-        res.status(500).send(error.message);
+        console.error('Login error:', error);
+        res.status(500).json({ message: 'Server error during login', error: error.message });
     }
 });
 
@@ -164,10 +165,10 @@ app.post('/signup', async (req, res) => {
             return res.status(400).json({ message: 'Username or email already exists' });
         }
         
-        // Insert new user
+        // Insert new user with plain text password
         const newUser = await pool.query(
             'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, username, email, role',
-            [username, email, password, 'user'] // Store hashed password in production
+            [username, email, password, 'user']
         );
         
         // Generate token
@@ -179,7 +180,8 @@ app.post('/signup', async (req, res) => {
         
         res.status(201).json({ token });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Signup error:', error);
+        res.status(500).json({ message: 'Server error during signup', error: error.message });
     }
 });
 
