@@ -1,4 +1,3 @@
-
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { format, isToday, isYesterday, isTomorrow } from 'date-fns';
@@ -7,15 +6,25 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-export const formatMatchDate = (date: Date): string => {
-  if (isToday(date)) {
-    return `Today, ${format(date, 'h:mm a')}`;
-  } else if (isYesterday(date)) {
-    return `Yesterday, ${format(date, 'h:mm a')}`;
-  } else if (isTomorrow(date)) {
-    return `Tomorrow, ${format(date, 'h:mm a')}`;
+export const formatMatchDate = (dateString: string | Date | undefined): string => {
+  if (!dateString) return 'TBD';
+  
+  try {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    if (isNaN(date.getTime())) return 'Invalid Date';
+    
+    if (isToday(date)) {
+      return `Today, ${format(date, 'h:mm a')}`;
+    } else if (isYesterday(date)) {
+      return `Yesterday, ${format(date, 'h:mm a')}`;
+    } else if (isTomorrow(date)) {
+      return `Tomorrow, ${format(date, 'h:mm a')}`;
+    }
+    return format(date, 'MMM d, yyyy HH:mm');
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'TBD';
   }
-  return format(date, 'MMM d, h:mm a');
 };
 
 export const getMatchStatusClass = (status: string): string => {

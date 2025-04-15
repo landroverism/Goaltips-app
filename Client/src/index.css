@@ -114,3 +114,21 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary));
 }
+
+
+/* Add to your index.css or a similar global stylesheet */
+img {
+  /* Prevent layout shifts when images fail to load */
+  min-height: 1px;
+  min-width: 1px;
+}
+
+/* Optional: Add a subtle animation for image loading */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+img:not([src=""]) {
+  animation: fadeIn 0.3s ease-in-out;
+}
