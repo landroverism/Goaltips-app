@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: goaltips-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        value: r6ZXU5W5lhRR22F2XqnPlnG9YIUWUG0crzCU4tN/P5PoLDxJYmdsLdBGfXnvdpW+I2Q6KCIpe1ugYVtGk2AY/g==
+      - key: SUPABASE_URL
+        value: https://bycpkknwhcylkkmetgji.supabase.co
+      - key: SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ5Y3Bra253aGN5bGtrbWV0Z2ppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxNTE3NDUsImV4cCI6MjA2MDcyNzc0NX0.hhvoa2j_EowvjCqcHgIF5IyTOy6GyiIAT6AIc1vlbjY
+      - key: CLIENT_URL
+        value: https://your-netlify-site.netlify.app

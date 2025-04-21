@@ -11,6 +11,9 @@ const sportmonksAPI = require('./sportmonksAPI');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Log the port for debugging
+console.log(`Server starting on port ${PORT}`);
+
 // Middleware
 app.use(cors({
   origin: [
