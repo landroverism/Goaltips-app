@@ -1,0 +1,13 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[context.production.environment]
+  VITE_SUPABASE_URL = "https://bycpkknwhcylkkmetgji.supabase.co"
+  # Note: You'll need to add your VITE_SUPABASE_ANON_KEY in the Netlify dashboard
+  # VITE_API_URL will be added after backend deployment
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
