@@ -9,10 +9,7 @@ services:
       - key: PORT
         value: 5000
       - key: CLIENT_URL
-        fromService:
-          name: goaltips-client
-          type: web
-          property: url
+        value: https://goaltips-client.onrender.com
       - key: JWT_SECRET
         sync: false
       - key: SUPABASE_URL
@@ -35,10 +32,7 @@ services:
       - key: VITE_SUPABASE_ANON_KEY
         sync: false
       - key: VITE_API_URL
-        fromService:
-          name: goaltips-api
-          type: web
-          property: url
+        value: https://goaltips-api.onrender.com
     headers:
       - path: /*
         name: Cache-Control
