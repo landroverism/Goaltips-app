@@ -2,7 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-const pool = require('./db');
+const { supabaseClient, supabaseAdmin } = require('./supabaseClient');
+const supabaseDb = require('./supabaseDb');
+const supabaseAuth = require('./supabaseAuth');
 const { authenticateToken, isAdmin } = require('./auth');
 const sportmonksAPI = require('./sportmonksAPI');
 
@@ -21,8 +23,8 @@ app.get('/', (req, res) => {
 // Get all users (for testing purposes, remove in production)
 app.get('/users', async (req, res) => {
     try {
-        const users = await pool.query('SELECT id, username, role FROM users');
-        res.json(users.rows);
+        const users = await supabaseDb.getAllUsers();
+        res.json(users);
     } catch (error) {
         res.status(500).send(error.message);
     }
@@ -31,35 +33,27 @@ app.get('/users', async (req, res) => {
 // Get all matches
 app.get('/matches', async (req, res) => {
     try {
-        const matches = await pool.query('SELECT * FROM matches');
-        res.json(matches.rows);
+        const matches = await supabaseDb.getAllMatches();
+        res.json(matches);
     } catch (error) {
         res.status(500).send(error.message);
     }
 });
 
-// User login (generates JWT token)
+// User login (uses Supabase authentication)
 app.post('/login', async (req, res) => {
-    const { email, password} = req.body;
+    const { email, password } = req.body;
 
     try {
-        const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (user.rows.length === 0) return res.status(400).json({ message: 'User not found' });
-
-        if (user.rows[0].password !== password) {
-            return res.status(400).json({ message: 'Invalid password' });
+        const { user, session, success, error } = await supabaseAuth.signIn(email, password);
+        
+        if (!success || error) {
+            return res.status(400).json({ message: error?.message || 'Authentication failed' });
         }
 
-        const token = jwt.sign(
-            { id: user.rows[0].id, username: user.rows[0].username, email: user.rows[0].email, role: user.rows[0].role },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-
-        res.json({ token });
-    } 
-    
-    catch (error) {
+        // Return the session token from Supabase
+        res.json({ token: session.access_token, user });
+    } catch (error) {
         res.status(500).send(error.message);
     }
 });
@@ -69,12 +63,12 @@ app.post('/predictions', authenticateToken, isAdmin, async (req, res) => {
     try {
         const { match_id, predicted_winner } = req.body;
 
-        const newPrediction = await pool.query(
-            'INSERT INTO predictions (match_id, predicted_winner) VALUES ($1, $2) RETURNING *',
-            [match_id, predicted_winner]
-        );
+        const newPrediction = await supabaseDb.addPrediction({
+            match_id,
+            predicted_winner
+        });
 
-        res.json(newPrediction.rows[0]);
+        res.json(newPrediction);
     } catch (error) {
         res.status(500).send(error.message);
     }
@@ -83,12 +77,8 @@ app.post('/predictions', authenticateToken, isAdmin, async (req, res) => {
 // Users can only view predictions
 app.get('/predictions', async (req, res) => {
     try {
-        const predictions = await pool.query(
-            `SELECT p.id, m.home_team, m.away_team, p.predicted_winner 
-             FROM predictions p
-             JOIN matches m ON p.match_id = m.id`
-        );
-        res.json(predictions.rows);
+        const predictions = await supabaseDb.getAllPredictions();
+        res.json(predictions);
     } catch (error) {
         res.status(500).send(error.message);
     }
@@ -158,26 +148,29 @@ app.get('/api/standings/:seasonId', authenticateToken, async (req, res) => {
 app.post('/signup', async (req, res) => {
     const { username, email, password } = req.body;
     try {
-        // Check if user already exists
-        const userCheck = await pool.query('SELECT * FROM users WHERE username = $1 OR email = $2', [username, email]);
-        if (userCheck.rows.length > 0) {
-            return res.status(400).json({ message: 'Username or email already exists' });
+        const { user, success, message, error } = await supabaseAuth.signUp(email, password, { 
+            username, 
+            role: 'user' 
+        });
+        
+        if (!success) {
+            return res.status(400).json({ message: message || 'Registration failed' });
         }
         
-        // Insert new user
-        const newUser = await pool.query(
-            'INSERT INTO users (username, email, password, role) VALUES ($1, $2, $3, $4) RETURNING id, username, email, role',
-            [username, email, password, 'user'] // Store hashed password in production
-        );
+        // Sign in the user to get a session
+        const signInResult = await supabaseAuth.signIn(email, password);
         
-        // Generate token
-        const token = jwt.sign(
-            { id: newUser.rows[0].id, username: newUser.rows[0].username, email: newUser.rows[0].email, role: newUser.rows[0].role },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
+        if (!signInResult.success) {
+            return res.status(201).json({ 
+                message: 'User created but login failed. Please try logging in.', 
+                user: user 
+            });
+        }
         
-        res.status(201).json({ token });
+        res.status(201).json({ 
+            token: signInResult.session.access_token, 
+            user: signInResult.user 
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -187,17 +180,13 @@ app.post('/signup', async (req, res) => {
 app.post('/reset-password', async (req, res) => {
     const { email } = req.body;
     try {
-        const user = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-        if (user.rows.length === 0) {
-            return res.status(404).json({ message: 'User not found' });
+        const { success, message, error } = await supabaseAuth.requestPasswordReset(email);
+        
+        if (!success || error) {
+            return res.status(404).json({ message: error?.message || 'User not found' });
         }
         
-        // In a real application, you would:
-        // 1. Generate a reset token
-        // 2. Store it in the database with an expiration
-        // 3. Send an email with a reset link
-        
-        res.json({ message: 'Password reset instructions sent to your email' });
+        res.json({ message });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

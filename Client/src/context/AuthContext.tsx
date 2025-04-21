@@ -1,13 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
-import { login as apiLogin, signup as apiSignup, resetPassword as apiResetPassword } from '../services/api';
-import { jwtDecode } from 'jwt-decode';
+import supabaseClient from '../supabaseClient';
 
 interface User {
   id: string;
   email: string;
   username: string;
   isAdmin: boolean;
+  user_metadata?: {
+    username?: string;
+    role?: string;
+  };
 }
 
 interface AuthContextType {
@@ -15,8 +18,9 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, username: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  updatePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,57 +30,99 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (token && storedUser) {
+    // Check for active session on component mount
+    const checkSession = async () => {
       try {
-        // Verify token is not expired
-        const decodedToken: any = jwtDecode(token);
-        const currentTime = Date.now() / 1000;
+        setLoading(true);
         
-        if (decodedToken.exp && decodedToken.exp > currentTime) {
-          setUser(JSON.parse(storedUser));
-        } else {
-          // Token expired, clear storage
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+        // Get current session
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        
+        if (error) {
+          throw error;
         }
-      } catch (error) {
-        console.error('Invalid token:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        
+        if (session) {
+          // Get user data
+          const { data: { user: supabaseUser }, error: userError } = await supabaseClient.auth.getUser();
+          
+          if (userError) {
+            throw userError;
+          }
+          
+          if (supabaseUser) {
+            const userData: User = {
+              id: supabaseUser.id,
+              email: supabaseUser.email || '',
+              username: supabaseUser.user_metadata?.username || supabaseUser.email?.split('@')[0] || '',
+              isAdmin: supabaseUser.user_metadata?.role === 'admin',
+              user_metadata: supabaseUser.user_metadata
+            };
+            
+            setUser(userData);
+          }
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
+      } finally {
+        setLoading(false);
       }
-    }
+    };
     
-    setLoading(false);
+    checkSession();
+    
+    // Set up auth state change listener
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          const userData: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            username: session.user.user_metadata?.username || session.user.email?.split('@')[0] || '',
+            isAdmin: session.user.user_metadata?.role === 'admin',
+            user_metadata: session.user.user_metadata
+          };
+          
+          setUser(userData);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      }
+    );
+    
+    // Clean up subscription on unmount
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const response = await apiLogin({ email, password });
       
-      const { token } = response.data;
-      localStorage.setItem('token', token);
+      const { data, error } = await supabaseClient.auth.signInWithPassword({
+        email,
+        password
+      });
       
-      // Decode token to get user info
-      const decodedToken: any = jwtDecode(token);
+      if (error) throw error;
       
-      const userData: User = {
-        id: decodedToken.id || '',
-        username: decodedToken.username || '',
-        email: decodedToken.email || email, // Use email as email if not provided
-        isAdmin: decodedToken.role === 'admin'
-      };
-      
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
-      toast.success('Login successful!');
-    } catch (error) {
+      if (data.user) {
+        const userData: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          username: data.user.user_metadata?.username || data.user.email?.split('@')[0] || '',
+          isAdmin: data.user.user_metadata?.role === 'admin',
+          user_metadata: data.user.user_metadata
+        };
+        
+        setUser(userData);
+        toast.success('Login successful!');
+      }
+    } catch (error: any) {
       console.error('Login error:', error);
-      toast.error('Invalid email or password');
+      toast.error(error.message || 'Invalid email or password');
       throw error;
     } finally {
       setLoading(false);
@@ -86,52 +132,99 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signup = async (email: string, username: string, password: string) => {
     try {
       setLoading(true);
-      const response = await apiSignup({ email, username, password });
       
-      // If signup returns a token directly
-      if (response.data.token) {
-        const { token } = response.data;
-        localStorage.setItem('token', token);
-        
-        // Decode token to get user info
-        const decodedToken: any = jwtDecode(token);
-        
+      const { data, error } = await supabaseClient.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            role: 'user'
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      // Note: Supabase requires email verification by default
+      // The user won't be fully signed in until they verify their email
+      toast.success('Account created! Please check your email to verify your account.');
+      
+      // If email confirmation is disabled in your Supabase project settings,
+      // the user will be automatically signed in
+      if (data.user && !data.user.identities?.[0].identity_data.email_verified) {
         const userData: User = {
-          id: decodedToken.id || '',
-          username: decodedToken.username || username,
-          email: decodedToken.email || email,
-          isAdmin: decodedToken.role === 'admin'
+          id: data.user.id,
+          email: data.user.email || '',
+          username: username,
+          isAdmin: false,
+          user_metadata: data.user.user_metadata
         };
         
         setUser(userData);
-        localStorage.setItem('user', JSON.stringify(userData));
       }
-      
-      toast.success('Account created successfully!');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Signup error:', error);
-      toast.error('Failed to create account');
+      toast.error(error.message || 'Failed to create account');
       throw error;
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    toast.info('Logged out successfully');
+  const logout = async () => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabaseClient.auth.signOut();
+      
+      if (error) throw error;
+      
+      setUser(null);
+      toast.info('Logged out successfully');
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      toast.error(error.message || 'Failed to log out');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const resetPassword = async (email: string) => {
     try {
       setLoading(true);
-      await apiResetPassword(email);
+      
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`
+      });
+      
+      if (error) throw error;
+      
       toast.success('Password reset instructions sent to your email');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Reset password error:', error);
-      toast.error('Failed to send reset instructions');
+      toast.error(error.message || 'Failed to send reset instructions');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Update password (new function for Supabase)
+  const updatePassword = async (newPassword: string) => {
+    try {
+      setLoading(true);
+      
+      const { error } = await supabaseClient.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
+      toast.success('Password updated successfully');
+    } catch (error: any) {
+      console.error('Update password error:', error);
+      toast.error(error.message || 'Failed to update password');
       throw error;
     } finally {
       setLoading(false);
@@ -139,7 +232,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, signup, logout, resetPassword }}>
+    <AuthContext.Provider value={{ user, loading, login, signup, logout, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );

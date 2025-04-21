@@ -19,6 +19,7 @@ import UserPredictionsPage from "./pages/UserPredictionsPage";
 import { ThemeProvider } from "./context/ThemeContext";
 import { AuthProvider } from "./context/AuthContext";
 import { useState } from "react";
+import AdminRoute from "./components/auth/AdminRoute";
 
 const App = () => {
   // Create QueryClient inside the component
@@ -38,10 +39,15 @@ const App = () => {
                   <Route path="/matches" element={<MatchesPage />} />
                   <Route path="/matches/:matchId" element={<MatchDetailsPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
-                  <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/leagues/:leagueId" element={<LeaguePage />} />
                   <Route path="/teams/:teamId" element={<MatchesPage />} />
                   <Route path="/predictions" element={<UserPredictionsPage />} />
+                </Route>
+                {/* Admin routes protected by AdminRoute */}
+                <Route element={<AdminRoute />}>
+                  <Route element={<Layout />}>
+                    <Route path="/admin" element={<AdminDashboard />} />
+                  </Route>
                 </Route>
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/signup" element={<SignupPage />} />
