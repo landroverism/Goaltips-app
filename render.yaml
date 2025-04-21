@@ -1,0 +1,50 @@
+services:
+  # Backend API service
+  - type: web
+    name: goaltips-api
+    env: node
+    buildCommand: npm install && npm run install:server
+    startCommand: npm run server
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: CLIENT_URL
+        fromService:
+          name: goaltips-client
+          type: web
+          property: url
+      - key: JWT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+    autoDeploy: true
+
+  # Frontend client service
+  - type: web
+    name: goaltips-client
+    env: static
+    buildCommand: cd Client && npm install && npm run build
+    staticPublishPath: ./Client/dist
+    envVars:
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: VITE_API_URL
+        fromService:
+          name: goaltips-api
+          type: web
+          property: url
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: public, max-age=0, must-revalidate
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    autoDeploy: true

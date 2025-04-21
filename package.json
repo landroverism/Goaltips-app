@@ -1,0 +1,32 @@
+{
+  "name": "goaltips-app",
+  "version": "1.0.0",
+  "description": "Football prediction application with Supabase integration",
+  "main": "Server/server.js",
+  "scripts": {
+    "start": "node Server/server.js",
+    "server": "cd Server && npm start",
+    "client": "cd Client && npm run dev",
+    "install:server": "cd Server && npm install",
+    "install:client": "cd Client && npm install",
+    "install:all": "npm install && npm run install:server && npm run install:client",
+    "build:client": "cd Client && npm run build",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "render-postbuild": "cd Client && npm install && npm run build"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "dependencies": {
+    "concurrently": "^8.2.0"
+  },
+  "keywords": [
+    "football",
+    "predictions",
+    "supabase",
+    "react",
+    "node"
+  ],
+  "author": "",
+  "license": "ISC"
+}
